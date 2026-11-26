@@ -37,3 +37,4 @@ Sources, build trees and built packages go to `~/.cache/pkgbuilds`, not into the
 - `scripts/sync-aur.sh [pkg...]` is what the workflow runs; `DRY_RUN=1` only prints.
 - `scripts/outdated.sh` compares installed versions against this repo.
 - `scripts/classify-change.py <base> <head>` says whether a change is only a version bump.
+- `scripts/verify-sources.py <.SRCINFO>...` downloads the listed sources and checks their checksums.

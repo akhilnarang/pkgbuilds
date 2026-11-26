@@ -56,6 +56,17 @@ jobs:
             echo '```'; cat .review/classification.txt; echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Reads only .SRCINFO from the pull request; nothing in it is executed.
+      - name: Verify source checksums
+        run: |
+          mapfile -t infos < <(find .review/new -name .SRCINFO)
+          if [ ${#infos[@]} -gt 0 ]; then
+            scripts/verify-sources.py "${infos[@]}" | tee .review/checksums.txt || echo "CHECKSUM MISMATCH" >> .review/checksums.txt
+          else
+            echo "no .SRCINFO changed" > .review/checksums.txt
+          fi
+          { echo '```'; cat .review/checksums.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Label the pull request
         run: |
           gh label create trivial-bump --color 0e8a16 --description "Only version and checksums changed" --force
@@ -86,7 +97,8 @@ jobs:
           show_full_output: true
           claude_args: |
             --max-turns 25
-            --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Bash(gh pr comment:*)"
+            --allowedTools "Read,Glob,Grep,WebFetch,WebSearch,Write"
+            --disallowedTools "Bash,Edit,NotebookEdit,Agent,Task"
           prompt: |
             You are the security reviewer for a personal repository of Arch Linux
             PKGBUILDs forked from the AUR. Pull request #${{ env.PR }} brings in an
@@ -104,6 +116,9 @@ jobs:
             - .review/classification.txt first line is `trivial` (only version,
                                          pkgrel and checksums changed) or
                                          `needs-review`, then the lines that differ
+            - .review/checksums.txt      result of downloading each remote source
+                                         (generic and x86_64) and comparing it with
+                                         the checksum in the new .SRCINFO
             - .review/diff.patch         the full diff
             - .review/new/               the changed files as they would be after merge
             - the checkout itself is `main`, i.e. the files before the change
@@ -123,10 +138,16 @@ jobs:
                by known security issues. Say plainly when you could not confirm
                something; do not guess.
 
-            Then post exactly one comment with:
-              gh pr comment ${{ env.PR }} --edit-last --create-if-none --body "..."
+            You have no shell. Then write your review, as GitHub markdown, to the
+            file .review/comment.md; a later step posts it as the PR comment.
             Format: first line a verdict, one of `Looks safe to merge`,
             `Merge with care`, or `Do not merge`, in bold. Then at most a dozen
             short bullet points: what changed, what you verified and how, what you
             could not verify, and any security fixes in the new version. No
-            preamble. You only comment: never approve, merge, close, or push.
+            preamble.
+
+      - name: Post the review
+        if: steps.token.outputs.present == '1'
+        run: |
+          if [ ! -s .review/comment.md ]; then echo "::error::Claude wrote no review"; exit 1; fi
+          gh pr comment "$PR" --edit-last --create-if-none --body-file .review/comment.md
