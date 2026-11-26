@@ -15,6 +15,11 @@ fork was last synced to.
 upstream diff. Local edits are kept: the change is applied as a 3-way patch, and a conflict
 fails the run for that package instead of overwriting anything.
 
+Each pull request is reviewed automatically by `.github/workflows/review.yml`: a script labels it
+`trivial-bump` (only version and checksums changed) or `needs-review`, and Claude reads the diff
+and comments with a verdict. Nothing is approved or merged automatically. The Claude step needs
+the `CLAUDE_CODE_OAUTH_TOKEN` secret (from `claude setup-token`) and is skipped without it.
+
 After merging:
 
 ```sh
@@ -31,3 +36,4 @@ Sources, build trees and built packages go to `~/.cache/pkgbuilds`, not into the
 - `scripts/add.sh <pkg>...` imports packages from the AUR at their current commit.
 - `scripts/sync-aur.sh [pkg...]` is what the workflow runs; `DRY_RUN=1` only prints.
 - `scripts/outdated.sh` compares installed versions against this repo.
+- `scripts/classify-change.py <base> <head>` says whether a change is only a version bump.
