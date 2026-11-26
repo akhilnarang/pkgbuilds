@@ -3,6 +3,9 @@
 Personal forks of the AUR packages I use. Nothing is built or installed from the AUR directly;
 upstream changes arrive as pull requests and get reviewed before they are merged.
 
+The PKGBUILDs and accompanying files in each package directory come from the AUR and belong to
+their respective maintainers; see each package's AUR page for authorship and licence.
+
 ## Layout
 
 One directory per package, holding the AUR repo's files plus `.aur-commit`, the AUR commit the
